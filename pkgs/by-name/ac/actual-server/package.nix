@@ -70,6 +70,21 @@ stdenv.mkDerivation (finalAttrs: {
 
     ln -sv ../../../${translations.name} ./packages/desktop-client/locale
 
+    ${lib.optionalString stdenv.hostPlatform.isDarwin ''
+      # Nix renames case-colliding theme paths on Darwin's case-insensitive store.
+      if [ -d packages/component-library/src/themes~nix~case~hack~1 ]; then
+        ln -s themes~nix~case~hack~1 packages/component-library/src/themes
+        mkdir -p packages/desktop-client/src/style/themes
+        cp packages/component-library/src/themes~nix~case~hack~1/{dark,light,midnight,palette}.css \
+          packages/desktop-client/src/style/themes/
+        substituteInPlace packages/desktop-client/src/style/theme.tsx \
+          --replace-fail '@actual-app/components/themes/dark.css?inline' './themes/dark.css?inline' \
+          --replace-fail '@actual-app/components/themes/light.css?inline' './themes/light.css?inline' \
+          --replace-fail '@actual-app/components/themes/midnight.css?inline' './themes/midnight.css?inline' \
+          --replace-fail '@actual-app/components/themes/palette.css?inline' './themes/palette.css?inline'
+      fi
+    ''}
+
     patchShebangs --build ./bin ./packages/*/bin
 
     # Patch all references to `git` to a no-op `true`. This neuter automatic
